@@ -3,7 +3,6 @@ import html
 import numpy as np
 import pandas as pd
 import streamlit as st
-from difflib import get_close_matches
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import pairwise_distances
 
@@ -199,27 +198,25 @@ df = load_data()
 D = build_distances(df)
 cluster_profile = df.groupby("cluster")[FEATURES].mean()
 overall_mean = df[FEATURES].mean()
+overall_std = df[FEATURES].std()
 
 
 def describe_cluster(cluster_id):
     row = cluster_profile.loc[cluster_id]
-    diff = row - overall_mean
+    # distance from the overall average measured in standard deviations, so
+    # features on different scales (tempo in BPM, loudness in dB) compare fairly
+    diff = (row - overall_mean) / overall_std
     return diff.sort_values(ascending=False).head(2).index.tolist()
 
 
-def recommend(song_name, n=5, seed=0):
-    match = df[df["song"].str.lower() == song_name.lower()]
-    if len(match) == 0:
-        suggestions = get_close_matches(song_name, df["song"].tolist(), n=3, cutoff=0.4)
-        return None, suggestions, None
-
-    i = match.index[0]
+def recommend(i, n=5, seed=0):
+    """Recommend n songs closest to song at row index i, from its own cluster."""
     song_cluster = df.loc[i, "cluster"]
 
     # positions of the other songs in the same cluster
     same_cluster = df.index[(df["cluster"] == song_cluster) & (df.index != i)].to_numpy()
     if len(same_cluster) == 0:
-        return df.loc[[]], None, song_cluster
+        return df.loc[[]], song_cluster
 
     # order them by distance to the chosen song, closest first
     order = np.argsort(D[i, same_cluster])
@@ -231,7 +228,7 @@ def recommend(song_name, n=5, seed=0):
     chosen = rng.permutation(pool)[:n]
 
     results = df.loc[chosen, ["song", "artist", "genre", "id"]]
-    return results, None, song_cluster
+    return results, song_cluster
 
 
 def song_card_html(row):
@@ -265,14 +262,13 @@ def show_song_card(row, key_prefix, show_player=False, show_feedback=False):
     with st.container(border=True):
         left, right = st.columns([4, 1])
         with left:
+            st.markdown(song_card_html(row), unsafe_allow_html=True)
             if show_player:
-                st.components.v1.iframe(
-                    "https://open.spotify.com/embed/track/" + str(row["id"]),
-                    height=80,
-                )
-                st.caption(f'{row["artist"]}  ·  {row["genre"]}')
-            else:
-                st.markdown(song_card_html(row), unsafe_allow_html=True)
+                # one shared player (rendered at the top) — so only one song
+                # plays at a time instead of every card playing at once
+                if st.button("▶ Play", key="play_" + key_prefix + row["id"]):
+                    st.session_state.now_playing = row["id"]
+                    st.rerun()
         with right:
             with st.popover("Save"):
                 playlist_names = list(st.session_state.playlists.keys())
@@ -330,6 +326,8 @@ if "dislikes" not in st.session_state:
     st.session_state.dislikes = 0
 if "seen_feedback" not in st.session_state:
     st.session_state.seen_feedback = {}
+if "now_playing" not in st.session_state:
+    st.session_state.now_playing = None
 if "browse_limit" not in st.session_state:
     st.session_state.browse_limit = PAGE_SIZE
 if "popular_limit" not in st.session_state:
@@ -349,14 +347,29 @@ with st.sidebar:
         st.progress(st.session_state.likes / votes, text=f"{st.session_state.likes} likes · {st.session_state.dislikes} passes")
     st.caption("Clusters come from Spotify audio features: energy, danceability, valence, and more.")
 
+# One shared player for the whole app: only one song ever plays at a time.
+# Pressing "Play" on any card sets this and the single player below swaps track.
+if st.session_state.now_playing:
+    st.caption("▶ Now playing")
+    st.components.v1.iframe(
+        "https://open.spotify.com/embed/track/" + str(st.session_state.now_playing),
+        height=80,
+    )
+
 tab_discover, tab_browse, tab_playlists, tab_popular = st.tabs(
     ["Discover", "Browse", "Playlists", "Popular"]
 )
 
 with tab_discover:
-    all_songs = sorted(df["song"].unique())
+    # label each song with its artist so duplicate titles (e.g. two "Stand By Me")
+    # can be told apart in the dropdown and point to the right song
+    song_labels = df["song"] + " — " + df["artist"]
+    label_to_index = {}
+    for idx, label in song_labels.items():
+        label_to_index.setdefault(label, idx)  # keep the first song with this label
+    all_labels = sorted(label_to_index)
     if "discover_song" not in st.session_state:
-        st.session_state.discover_song = all_songs[0]
+        st.session_state.discover_song = all_labels[0]
 
     controls, actions = st.columns([3, 1])
     with actions:
@@ -366,12 +379,12 @@ with tab_discover:
         surprise = st.button("Surprise me", use_container_width=True)
 
     if surprise:
-        st.session_state.discover_song = df.sample(1)["song"].iloc[0]
+        st.session_state.discover_song = song_labels.loc[df.sample(1).index[0]]
         st.session_state.match_seed += 1
         st.rerun()
 
     with controls:
-        song_input = st.selectbox("Start with a song you like", all_songs, key="discover_song")
+        song_input = st.selectbox("Start with a song you like", all_labels, key="discover_song")
         how_many = st.slider("How many matches", 3, 8, 5)
 
     need_new = (
@@ -384,19 +397,15 @@ with tab_discover:
     if need_new:
         if refresh or surprise:
             st.session_state.match_seed += 1
-        results, suggestions, cluster_id = recommend(
-            song_input, how_many, st.session_state.match_seed
-        )
+        i = label_to_index[song_input]
+        results, cluster_id = recommend(i, how_many, st.session_state.match_seed)
         st.session_state.results = results
-        st.session_state.suggestions = suggestions
         st.session_state.chosen_song = song_input
+        st.session_state.chosen_index = i
         st.session_state.cluster_id = cluster_id
 
-    if st.session_state.results is None:
-        if st.session_state.get("suggestions"):
-            st.warning("No exact match. Close titles: " + ", ".join(st.session_state.suggestions))
-        else:
-            st.warning("That title is not in the library yet.")
+    if st.session_state.results is None or len(st.session_state.results) == 0:
+        st.warning("No other songs share this vibe yet. Try another song.")
     else:
         cluster_id = st.session_state.cluster_id
         top_features = describe_cluster(cluster_id)
@@ -408,7 +417,7 @@ with tab_discover:
             + "**."
         )
 
-        chosen_row = df[df["song"] == st.session_state.chosen_song].iloc[0]
+        chosen_row = df.loc[st.session_state.chosen_index]
         compare = pd.DataFrame(
             {
                 "Your song": chosen_row[CHART_FEATURES].astype(float),

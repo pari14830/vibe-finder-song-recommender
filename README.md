@@ -5,9 +5,8 @@ already like. Instead of relying on genre labels, it groups songs by their
 **audio features** (danceability, energy, valence, tempo, and more) and suggests
 the closest matches within the same cluster.
 
-🔗 Live app:(https://vibe-finder.streamlit.app/)
-
-**📊 Presentation:** <!-- add your slides link here -->
+**🔗 Live app:** _add your Streamlit link here after deploying_
+**📊 Presentation:** _add your slides link here_
 
 ---
 
@@ -24,18 +23,26 @@ the closest matches within the same cluster.
 
 1. **Scraping** — the current Billboard Hot 100 is scraped from the web.
 2. **Data collection** — for each song, audio features are gathered through the
-   Deezer and ReccoBeats public APIs, producing a dataset of ~1,300 tracks.
+   Deezer and ReccoBeats public APIs, producing a dataset of ~1,365 tracks.
 3. **Clustering** — features are scaled, then **K-Means** groups the songs into
-   **7 clusters**. The number of clusters was confirmed with several metrics
-   (elbow, silhouette, Calinski-Harabasz, Davies-Bouldin).
+   **7 clusters**. The internal metrics (elbow, silhouette, Calinski-Harabasz,
+   Davies-Bouldin) don't point to a single "best" number of clusters, so k = 7
+   was chosen as a practical balance and validated with the hit-rate test below.
 4. **Recommending** — for a chosen song, the app finds the nearest tracks
    *inside its own cluster* using distances in the feature space.
 
 ### Does it actually work?
 
-Recommending from the same cluster is about **4× better** than random:
-a same-genre "hit rate" of roughly 29% versus 7% for random picks across the
-whole dataset.
+Yes. Measured as the share of recommendations that share the genre of the
+original song (see `notebooks/gnod_evaluation.ipynb`):
+
+| Method | Same-genre hit rate |
+|---|---|
+| Random pick (whole library) | ~8% |
+| Closest songs in the same cluster (the app) | ~39% |
+
+The app's recommendations are about **5× better than random** — evidence that
+grouping songs by sound really does capture musical similarity.
 
 ---
 
@@ -59,7 +66,8 @@ whole dataset.
 └── notebooks/
     ├── gnod_scraping_billboard.ipynb
     ├── gnod_data_collection.ipynb
-    └── gnod_clustering.ipynb
+    ├── gnod_clustering.ipynb
+    └── gnod_evaluation.ipynb
 ```
 
 ---
@@ -75,4 +83,4 @@ streamlit run app.py
 
 ## Author
 
-**Pariya** — transitioning into data analytics.
+**Pariya**
