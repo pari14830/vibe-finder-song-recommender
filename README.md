@@ -8,7 +8,9 @@ the closest matches within the same cluster.
 🔗 **Live app:** https://vibe-finder.streamlit.app/
 
 📊 **Presentation:** https://docs.google.com/presentation/d/13uJ_OAC1QGCYiFa7tUev3k1J1-n13SwI/edit
+
 ---
+
 
 ## What it does
 
