@@ -6,7 +6,7 @@ already like. Instead of relying on genre labels, it groups songs by their
 the closest matches within the same cluster.
 
 **🔗 Live app:** _add your Streamlit link here after deploying_
-**📊 Presentation:** _add your slides link here_
+**📊 Presentation:**https://docs.google.com/presentation/d/13uJ_OAC1QGCYiFa7tUev3klJ1-n13SwI/edit?usp=sharing&ouid=109599469251149380786&rtpof=true&sd=true
 
 ---
 
