@@ -5,9 +5,9 @@ already like. Instead of relying on genre labels, it groups songs by their
 **audio features** (danceability, energy, valence, tempo, and more) and suggests
 the closest matches within the same cluster.
 
-**🔗 Live app:https://vibe-finder.streamlit.app/
+**🔗 Live app:** https://vibe-finder.streamlit.app/
 
-**📊 Presentation:https://docs.google.com/presentation/d/13uJ_OAC1QGCYiFa7tUev3klJ1-n13SwI/edit?slide=id.p8#slide=id.p8
+**📊 Presentation:** https://docs.google.com/presentation/d/13uJ_OAC1QGCYiFa7tUev3k1J1-n13SwI/edit
 ---
 
 ## What it does
