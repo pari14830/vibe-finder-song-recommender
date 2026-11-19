@@ -472,7 +472,7 @@ with tab_browse:
     if len(browse) == 0:
         st.info("Nothing fits those filters. Widen energy or danceability, or clear the search.")
     else:
-        show_page(browse, "browse_", "browse_limit")
+        show_page(browse, "browse_", "browse_limit", show_player=True)
 
 with tab_playlists:
     with st.container(border=True):
