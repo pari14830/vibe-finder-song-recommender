@@ -262,13 +262,20 @@ def show_song_card(row, key_prefix, show_player=False, show_feedback=False):
     with st.container(border=True):
         left, right = st.columns([4, 1])
         with left:
-            st.markdown(song_card_html(row), unsafe_allow_html=True)
-            if show_player:
-                # one shared player (rendered at the top) — so only one song
-                # plays at a time instead of every card playing at once
-                if st.button("▶ Play", key="play_" + key_prefix + row["id"]):
-                    st.session_state.now_playing = row["id"]
-                    st.rerun()
+            # show the player only inside the card whose Play was pressed, so
+            # exactly one song plays at a time and it sits where you clicked
+            if show_player and st.session_state.get("now_playing") == row["id"]:
+                st.components.v1.iframe(
+                    "https://open.spotify.com/embed/track/" + str(row["id"]),
+                    height=80,
+                )
+                st.caption(f'{row["artist"]}  ·  {row["genre"]}')
+            else:
+                st.markdown(song_card_html(row), unsafe_allow_html=True)
+                if show_player:
+                    if st.button("▶ Play", key="play_" + key_prefix + row["id"]):
+                        st.session_state.now_playing = row["id"]
+                        st.rerun()
         with right:
             with st.popover("Save"):
                 playlist_names = list(st.session_state.playlists.keys())
@@ -346,15 +353,6 @@ with st.sidebar:
     if votes:
         st.progress(st.session_state.likes / votes, text=f"{st.session_state.likes} likes · {st.session_state.dislikes} passes")
     st.caption("Clusters come from Spotify audio features: energy, danceability, valence, and more.")
-
-# One shared player for the whole app: only one song ever plays at a time.
-# Pressing "Play" on any card sets this and the single player below swaps track.
-if st.session_state.now_playing:
-    st.caption("▶ Now playing")
-    st.components.v1.iframe(
-        "https://open.spotify.com/embed/track/" + str(st.session_state.now_playing),
-        height=80,
-    )
 
 tab_discover, tab_browse, tab_playlists, tab_popular = st.tabs(
     ["Discover", "Browse", "Playlists", "Popular"]
