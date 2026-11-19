@@ -244,9 +244,10 @@ def song_card_html(row):
 
 
 def record_feedback(key, value):
+    """Update like/pass counts. Returns True if the vote changed anything."""
     previous = st.session_state.seen_feedback.get(key)
     if value is None or value == previous:
-        return
+        return False
     if previous == 1:
         st.session_state.likes -= 1
     elif previous == 0:
@@ -256,6 +257,7 @@ def record_feedback(key, value):
     elif value == 0:
         st.session_state.dislikes += 1
     st.session_state.seen_feedback[key] = value
+    return True
 
 
 def show_song_card(row, key_prefix, show_player=False, show_feedback=False):
@@ -305,7 +307,9 @@ def show_song_card(row, key_prefix, show_player=False, show_feedback=False):
             if show_feedback:
                 st.caption("Good match?")
                 vote = st.feedback("thumbs", key="fb_" + key_prefix + row["id"])
-                record_feedback(key_prefix + row["id"], vote)
+                if record_feedback(key_prefix + row["id"], vote):
+                    # rerun so the sidebar like/pass counter updates right away
+                    st.rerun()
 
 
 def show_page(frame, key_prefix, limit_key, show_player=False, show_feedback=False):
